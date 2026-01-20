@@ -6,8 +6,10 @@ import EditorPanel from './components/EditorPanel';
 import OutputPanel from './components/OutputPanel';
 import SnippetsPanel from './components/SnippetsPanel';
 import ActivityBar from './components/ActivityBar';
+import TabBar from './components/TabBar';
+import SearchPanel from './components/SearchPanel';
 import { useCodeState } from './hooks/useCodeState';
-import { Language, ExecutionResult, CodeState, AIAction, ThemeType } from './types';
+import { Language, ExecutionResult, CodeState, AIAction, ThemeType, ProjectFile } from './types';
 import { executeCode } from './services/executionService';
 import { simulateMongoQuery } from './services/geminiService';
 import { INITIAL_CODE, THEMES } from './constants';
@@ -28,6 +30,10 @@ const App: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [mongoResults, setMongoResults] = useState<any>(null);
   const [isMongoLoading, setIsMongoLoading] = useState(false);
+  const [shareToast, setShareToast] = useState(false);
+  
+  // Tab Management
+  const [openFileIds, setOpenFileIds] = useState<string[]>([]);
   
   // Panel management states
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -41,6 +47,13 @@ const App: React.FC = () => {
   });
   
   const aiChatRef = useRef<AIChatHandle>(null);
+
+  // Initialize tabs
+  useEffect(() => {
+    if (activeFile && !openFileIds.includes(activeFile.id)) {
+      setOpenFileIds(prev => [...prev, activeFile.id]);
+    }
+  }, [activeFile, openFileIds]);
 
   // Theme Injection
   useEffect(() => {
@@ -60,14 +73,45 @@ const App: React.FC = () => {
     return files.filter(f => f.language === currentLanguage);
   }, [files, currentLanguage]);
 
-  React.useEffect(() => {
-    if (activeFile && activeFile.language !== currentLanguage) {
-      const firstInSpace = files.find(f => f.language === currentLanguage);
-      if (firstInSpace) {
-        setActiveFileId(firstInSpace.id);
+  const openFiles = useMemo(() => {
+    return files.filter(f => openFileIds.includes(f.id));
+  }, [files, openFileIds]);
+
+  const handleCloseTab = useCallback((id: string) => {
+    setOpenFileIds(prev => {
+      const remaining = prev.filter(fid => fid !== id);
+      if (activeFile?.id === id && remaining.length > 0) {
+        setActiveFileId(remaining[remaining.length - 1]);
       }
+      return remaining;
+    });
+  }, [activeFile, setActiveFileId]);
+
+  const handleExportProject = useCallback(() => {
+    const data = JSON.stringify(files, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `codestream-project-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [files]);
+
+  const handleShareProject = useCallback(() => {
+    try {
+      const state = btoa(unescape(encodeURIComponent(JSON.stringify(files))));
+      const shareUrl = `${window.location.origin}${window.location.pathname}?share=${state}`;
+      
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        setShareToast(true);
+        setTimeout(() => setShareToast(false), 3000);
+      });
+    } catch (e) {
+      console.error('Failed to generate share URL:', e);
+      alert('Failed to generate share link. The project might be too large.');
     }
-  }, [currentLanguage, activeFile, files, setActiveFileId]);
+  }, [files]);
 
   const handleCodeChange = useCallback((value: string | undefined) => {
     if (value === undefined || !activeFile) return;
@@ -87,12 +131,16 @@ const App: React.FC = () => {
   }, [activeFile, updateFileContent]);
 
   const detectLanguage = (name: string, defaultLang: Language): Language => {
-    if (name.endsWith('.py')) return 'python';
-    if (name.endsWith('.java')) return 'java';
-    if (name.endsWith('.html') || name.endsWith('.css') || (name.endsWith('.js') && defaultLang === 'html')) return 'html';
-    if (name.endsWith('.js')) return 'javascript';
-    if (name.endsWith('.mongodb')) return 'mongodb';
-    return defaultLang;
+    const ext = name.split('.').pop();
+    switch(ext) {
+      case 'py': return 'python';
+      case 'java': return 'java';
+      case 'html': return 'html';
+      case 'css': return 'html';
+      case 'js': return defaultLang === 'html' ? 'html' : 'javascript';
+      case 'mongodb': return 'mongodb';
+      default: return defaultLang;
+    }
   };
 
   const handleCreateFile = useCallback(() => {
@@ -123,9 +171,10 @@ const App: React.FC = () => {
 
   const handleDeleteFile = useCallback((fileId: string, name: string) => {
     if (confirm(`Permanently delete ${name}?`)) {
+      handleCloseTab(fileId);
       deleteFile(fileId);
     }
-  }, [deleteFile]);
+  }, [deleteFile, handleCloseTab]);
 
   const handleReset = useCallback(() => {
     if (!activeFile) return;
@@ -150,17 +199,16 @@ const App: React.FC = () => {
     if (!activeFile) return;
     setIsRunning(true);
     setExecutionResult(null);
-    // Automatically reveal output panel when running code
     setOutputPanelCollapsed(false);
 
     try {
-      if (currentLanguage === 'mongodb') {
+      if (activeFile.language === 'mongodb') {
         setIsMongoLoading(true);
         const results = await simulateMongoQuery(activeFile.content);
         setMongoResults(results);
         setIsMongoLoading(false);
-      } else if (currentLanguage !== 'html') {
-        const result = await executeCode(currentLanguage, activeFile.content, stdin);
+      } else if (activeFile.language !== 'html') {
+        const result = await executeCode(activeFile.language, activeFile.content, stdin);
         setExecutionResult(result);
       }
     } catch (error) {
@@ -175,9 +223,9 @@ const App: React.FC = () => {
   };
 
   const combinedFrontendState = useMemo(() => {
-    const htmlFile = files.find(f => f.name === 'index.html' && f.language === 'html');
-    const cssFile = files.find(f => f.name === 'styles.css' && f.language === 'html');
-    const jsFile = files.find(f => f.name === 'script.js' && f.language === 'html');
+    const htmlFile = files.find(f => f.name.endsWith('.html') && f.language === 'html');
+    const cssFile = files.find(f => f.name.endsWith('.css') && f.language === 'html');
+    const jsFile = files.find(f => f.name.endsWith('.js') && f.language === 'html');
 
     return {
       html: htmlFile?.content || '',
@@ -188,12 +236,8 @@ const App: React.FC = () => {
   }, [files]);
 
   const getFileIcon = (fileName: string, isActive: boolean) => {
-    if (fileName.endsWith('.py')) return <span className={`text-[10px] font-bold ${isActive ? 'text-[var(--accent-primary)]' : 'opacity-50'}`}>PY</span>;
-    if (fileName.endsWith('.java')) return <span className={`text-[10px] font-bold ${isActive ? 'text-[var(--accent-primary)]' : 'opacity-50'}`}>JV</span>;
-    if (fileName.endsWith('.html')) return <span className={`text-[10px] font-bold ${isActive ? 'text-[var(--accent-primary)]' : 'opacity-50'}`}>HT</span>;
-    if (fileName.endsWith('.css')) return <span className={`text-[10px] font-bold ${isActive ? 'text-[var(--accent-primary)]' : 'opacity-50'}`}>CS</span>;
-    if (fileName.endsWith('.js')) return <span className={`text-[10px] font-bold ${isActive ? 'text-[var(--accent-primary)]' : 'opacity-50'}`}>JS</span>;
-    return <span className={`text-[10px] font-bold opacity-50`}>TXT</span>;
+    const ext = fileName.split('.').pop()?.toUpperCase() || 'TXT';
+    return <span className={`text-[9px] font-black ${isActive ? 'text-[var(--accent-primary)]' : 'opacity-40'}`}>{ext}</span>;
   };
 
   const MemoizedNavbar = useMemo(() => (
@@ -213,8 +257,10 @@ const App: React.FC = () => {
       onToggleAiPanel={() => setAiPanelCollapsed(!aiPanelCollapsed)}
       outputPanelCollapsed={outputPanelCollapsed}
       onToggleOutputPanel={() => setOutputPanelCollapsed(!outputPanelCollapsed)}
+      onExportProject={handleExportProject}
+      onShareProject={handleShareProject}
     />
-  ), [currentLanguage, currentTheme, isRunning, files, setActiveFileId, runCode, aiPanelCollapsed, outputPanelCollapsed]);
+  ), [currentLanguage, currentTheme, isRunning, files, setActiveFileId, runCode, aiPanelCollapsed, outputPanelCollapsed, handleExportProject, handleShareProject]);
 
   return (
     <div className="h-screen flex flex-col bg-[var(--bg-app)] text-[var(--text-app)] overflow-hidden antialiased font-inter transition-colors duration-300">
@@ -234,10 +280,10 @@ const App: React.FC = () => {
         />
 
         {!sidebarCollapsed && (
-          <aside className="w-60 flex flex-col bg-[var(--bg-sidebar)] border-r border-[var(--border-app)] shrink-0 transition-all duration-300">
+          <aside className="w-64 flex flex-col bg-[var(--bg-sidebar)] border-r border-[var(--border-app)] shrink-0 transition-all duration-300 z-10">
             <div className="h-9 flex items-center px-4 border-b border-[var(--border-app)] bg-black/10">
               <span className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-60">
-                {activeSidebarTab === 'explorer' ? 'Explorer' : activeSidebarTab === 'snippets' ? 'Snippets' : 'Search'}
+                {activeSidebarTab === 'explorer' ? 'Explorer' : activeSidebarTab === 'snippets' ? 'Snippets' : 'Search Workspace'}
               </span>
             </div>
             
@@ -266,7 +312,7 @@ const App: React.FC = () => {
                           }`}
                         >
                           <div className="flex items-center gap-2.5 overflow-hidden flex-1">
-                            <div className={`w-4 h-4 rounded-sm flex items-center justify-center shrink-0 ${isActive ? 'bg-[var(--accent-primary)]/10' : 'bg-black/20'}`}>
+                            <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${isActive ? 'bg-[var(--accent-primary)]/10' : 'bg-black/20'}`}>
                               {getFileIcon(file.name, isActive)}
                             </div>
                             <span className="truncate">{file.name}</span>
@@ -283,13 +329,20 @@ const App: React.FC = () => {
               ) : activeSidebarTab === 'snippets' ? (
                 <SnippetsPanel language={currentLanguage} onSelect={handleInsertSnippet} />
               ) : (
-                <div className="p-6 text-[10px] opacity-40 font-bold uppercase tracking-widest text-center">Engine Standby</div>
+                <SearchPanel files={files} onSelectFile={setActiveFileId} />
               )}
             </div>
           </aside>
         )}
 
         <div className="flex-1 flex flex-col min-w-0 bg-[var(--bg-app)] relative transition-all duration-300">
+          <TabBar 
+            openFiles={openFiles} 
+            activeFileId={activeFile?.id || ''} 
+            onSelectFile={setActiveFileId} 
+            onCloseFile={handleCloseTab} 
+          />
+          
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <EditorPanel
               language={currentLanguage}
@@ -305,9 +358,9 @@ const App: React.FC = () => {
           </div>
           
           {!outputPanelCollapsed && (
-            <div className="h-2/5 min-h-[150px] flex flex-col transition-all duration-300">
+            <div className="h-[35%] min-h-[150px] flex flex-col transition-all duration-300">
               <OutputPanel
-                language={currentLanguage}
+                language={activeFile?.language || 'python'}
                 code={combinedFrontendState as any}
                 stdin={stdin}
                 onStdinChange={setStdin}
@@ -322,16 +375,28 @@ const App: React.FC = () => {
         </div>
 
         {!aiPanelCollapsed && (
-          <div className="w-[380px] shrink-0 flex transition-all duration-300 border-l border-[var(--border-app)]">
+          <div className="w-[400px] shrink-0 flex transition-all duration-300 border-l border-[var(--border-app)]">
             <AIChatPanel 
               ref={aiChatRef}
-              currentLanguage={currentLanguage} 
+              currentLanguage={activeFile?.language || currentLanguage} 
               currentCode={activeFile?.content || ''} 
               onApplyCode={handleApplyAICode}
             />
           </div>
         )}
       </div>
+
+      {/* Share Toast Notification */}
+      {shareToast && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-[var(--accent-primary)] text-black font-black text-[10px] uppercase tracking-[0.2em] px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+            Project Link Copied to Clipboard
+          </div>
+        </div>
+      )}
     </div>
   );
 };

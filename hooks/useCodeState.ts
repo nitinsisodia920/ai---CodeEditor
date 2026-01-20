@@ -5,10 +5,27 @@ import { INITIAL_CODE } from '../constants';
 
 export const useCodeState = () => {
   const [files, setFiles] = useState<ProjectFile[]>(() => {
+    // 1. Check for shared state in URL
+    const params = new URLSearchParams(window.location.search);
+    const sharedState = params.get('share');
+    if (sharedState) {
+      try {
+        const decoded = JSON.parse(decodeURIComponent(escape(atob(sharedState))));
+        if (Array.isArray(decoded) && decoded.length > 0) {
+          // Clean up the URL after loading
+          window.history.replaceState({}, document.title, window.location.pathname);
+          return decoded;
+        }
+      } catch (e) {
+        console.error('Failed to decode shared project state:', e);
+      }
+    }
+
+    // 2. Fallback to localStorage
     const saved = localStorage.getItem('codestream_files');
     if (saved) return JSON.parse(saved);
     
-    // Default starting files
+    // 3. Default starting files
     return [
       { id: '1', name: 'main.py', language: 'python', content: INITIAL_CODE.python },
       { id: '2', name: 'Main.java', language: 'java', content: INITIAL_CODE.java },

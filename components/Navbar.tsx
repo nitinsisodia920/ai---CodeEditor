@@ -14,6 +14,8 @@ interface NavbarProps {
   onToggleAiPanel: () => void;
   outputPanelCollapsed: boolean;
   onToggleOutputPanel: () => void;
+  onExportProject: () => void;
+  onShareProject: () => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({ 
@@ -26,19 +28,22 @@ const Navbar: React.FC<NavbarProps> = ({
   aiPanelCollapsed,
   onToggleAiPanel,
   outputPanelCollapsed,
-  onToggleOutputPanel
+  onToggleOutputPanel,
+  onExportProject,
+  onShareProject
 }) => {
   const [showThemes, setShowThemes] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   return (
     <nav className="h-12 bg-[var(--bg-navbar)] border-b border-[var(--border-app)] flex items-center justify-between px-4 z-50 shrink-0 transition-colors duration-300">
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-3 select-none">
-          <div className="w-7 h-7 bg-[var(--text-highlight)] rounded-md flex items-center justify-center font-black text-[var(--bg-navbar)] text-[9px] tracking-tighter shadow-lg shadow-[var(--accent-primary)]/10">
+          <div className="w-7 h-7 bg-[var(--text-highlight)] rounded-md flex items-center justify-center font-black text-[var(--bg-navbar)] text-[9px] tracking-tighter shadow-lg shadow-[var(--accent-primary)]/20">
             CS
           </div>
           <span className="font-bold text-[11px] uppercase tracking-[0.25em] text-[var(--text-highlight)] hidden md:block">
-            CodeStream <span className="text-[var(--accent-primary)]">Node</span>
+            CodeStream <span className="text-[var(--accent-primary)]">AI</span>
           </span>
         </div>
 
@@ -63,20 +68,44 @@ const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Project Utilities */}
+        <div className="flex items-center gap-1">
+          <button 
+            onClick={onShareProject}
+            title="Share Project Link"
+            className="p-1.5 text-slate-500 hover:text-[var(--accent-primary)] transition-all hover:bg-white/5 rounded-md"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+          </button>
+          <button 
+            onClick={onExportProject}
+            title="Export Project (JSON)"
+            className="p-1.5 text-slate-500 hover:text-white transition-all hover:bg-white/5 rounded-md"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="h-5 w-[1px] bg-white/5 mx-1"></div>
+
         {/* Layout Toggles */}
         <div className="flex items-center gap-1 bg-white/5 p-0.5 rounded-lg border border-white/5">
           <button 
             onClick={onToggleOutputPanel}
-            title={outputPanelCollapsed ? "Show Terminal" : "Hide Terminal"}
+            title={outputPanelCollapsed ? "Show Console" : "Hide Console"}
             className={`p-1.5 rounded-md transition-all ${!outputPanelCollapsed ? 'text-[var(--accent-primary)] bg-white/5' : 'text-slate-500 hover:text-slate-300'}`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z" />
             </svg>
           </button>
           <button 
             onClick={onToggleAiPanel}
-            title={aiPanelCollapsed ? "Show AI Assistant" : "Hide AI Assistant"}
+            title={aiPanelCollapsed ? "Open AI Co-Pilot" : "Hide AI Assistant"}
             className={`p-1.5 rounded-md transition-all ${!aiPanelCollapsed ? 'text-[var(--accent-primary)] bg-white/5' : 'text-slate-500 hover:text-slate-300'}`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -93,13 +122,13 @@ const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setShowThemes(!showThemes)}
             className="flex items-center gap-2 px-3 h-8 bg-white/5 hover:bg-white/10 border border-white/5 rounded-md transition-all group"
           >
-            <div className="w-3 h-3 rounded-full border border-white/20 bg-[var(--accent-primary)]"></div>
+            <div className="w-2.5 h-2.5 rounded-full border border-white/20 bg-[var(--accent-primary)]"></div>
             <span className="text-[10px] font-bold text-[var(--text-app)] uppercase tracking-widest hidden lg:block">Theme</span>
             <svg className={`w-3 h-3 text-[var(--text-app)] transition-transform ${showThemes ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
 
           {showThemes && (
-            <div className="absolute right-0 mt-2 w-48 bg-[var(--bg-sidebar)] border border-[var(--border-app)] rounded-xl shadow-2xl p-1 z-50 overflow-hidden backdrop-blur-xl">
+            <div className="absolute right-0 mt-2 w-48 bg-[var(--bg-sidebar)] border border-[var(--border-app)] rounded-xl shadow-2xl p-1 z-50 overflow-hidden backdrop-blur-xl animate-in fade-in zoom-in duration-200">
               {Object.entries(THEMES).map(([key, theme]: [any, any]) => (
                 <button
                   key={key}
@@ -111,18 +140,16 @@ const Navbar: React.FC<NavbarProps> = ({
                     currentTheme === key ? 'bg-white/10 text-[var(--text-highlight)]' : 'text-[var(--text-app)] hover:bg-white/5'
                   }`}
                 >
-                  <div className="flex items-center gap-1 w-8">
+                  <div className="flex items-center gap-1 w-8 shrink-0">
                     <div className="w-3 h-3 rounded-full" style={{ background: theme.primary }}></div>
                     <div className="w-3 h-3 rounded-full opacity-40" style={{ background: theme.bg }}></div>
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider">{theme.name}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider truncate">{theme.name}</span>
                 </button>
               ))}
             </div>
           )}
         </div>
-
-        <div className="h-8 w-[1px] bg-white/5 mx-1 hidden sm:block"></div>
 
         <button
           onClick={onRun}
@@ -130,18 +157,36 @@ const Navbar: React.FC<NavbarProps> = ({
           className={`flex items-center gap-2 px-6 h-8 rounded-md font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg ${
             isRunning 
               ? 'bg-white/5 text-white/20 cursor-not-allowed'
-              : 'bg-[var(--accent-primary)] text-black hover:opacity-90 shadow-[var(--accent-primary)]/20'
+              : 'bg-[var(--accent-primary)] text-black hover:opacity-90 shadow-[var(--accent-primary)]/30'
           }`}
         >
           {isRunning ? (
-             <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+             <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
              </svg>
           ) : (
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
           )}
-          {isRunning ? 'Busy' : 'Run'}
+          {isRunning ? 'EXEC' : 'RUN'}
+        </button>
+
+        <div className="h-8 w-[1px] bg-white/5 mx-1 hidden sm:block"></div>
+
+        {/* User Profile */}
+        <button 
+          onClick={() => setIsLoggedIn(!isLoggedIn)}
+          className={`h-8 w-8 rounded-full border transition-all flex items-center justify-center overflow-hidden ${
+            isLoggedIn ? 'border-[var(--accent-primary)]/50' : 'border-white/10'
+          }`}
+        >
+          {isLoggedIn ? (
+            <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=Felix" alt="User" className="w-full h-full object-cover" />
+          ) : (
+            <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          )}
         </button>
       </div>
     </nav>
