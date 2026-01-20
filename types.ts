@@ -19,6 +19,22 @@ export interface ProjectTemplate {
   files: { name: string; content: string; language: Language }[];
 }
 
+export interface ExecutionHistoryItem {
+  id: string;
+  timestamp: number;
+  language: Language;
+  status: string;
+  output: string;
+  codeSnippet: string;
+}
+
+export interface ProjectSettings {
+  fontSize: number;
+  wordWrap: 'on' | 'off';
+  lineNumbers: 'on' | 'off';
+  minimap: boolean;
+}
+
 export interface CodeState {
   python: string;
   java: string;

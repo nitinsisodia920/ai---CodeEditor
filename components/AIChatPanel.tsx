@@ -19,6 +19,7 @@ const AIChatPanel = forwardRef<AIChatHandle, AIChatPanelProps>(({ currentLanguag
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -61,6 +62,28 @@ const AIChatPanel = forwardRef<AIChatHandle, AIChatPanelProps>(({ currentLanguag
     } finally {
       setIsTyping(false);
     }
+  };
+
+  const handleVoiceInput = () => {
+    if (!('webkitSpeechRecognition' in window)) {
+      alert("Voice recognition is not supported in your browser.");
+      return;
+    }
+
+    const recognition = new (window as any).webkitSpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setInputValue(prev => prev + ' ' + transcript);
+    };
+
+    recognition.start();
   };
 
   useImperativeHandle(ref, () => ({
@@ -118,7 +141,6 @@ const AIChatPanel = forwardRef<AIChatHandle, AIChatPanelProps>(({ currentLanguag
           <ActionChip onClick={() => handleSend("Fix syntax and logical errors.", AIAction.FIX)} label="Fix Errors" icon="🛠️" />
           <ActionChip onClick={() => handleSend("Optimize for better performance.", AIAction.OPTIMIZE)} label="Optimize" icon="🚀" />
           <ActionChip onClick={() => handleSend("Add helpful comments to this code.", AIAction.GENERATE)} label="Document" icon="📝" />
-          <ActionChip onClick={() => handleSend("Refactor this code to be cleaner.", AIAction.GENERATE)} label="Clean Code" icon="🧼" />
         </div>
 
         {messages.map((msg, idx) => (
@@ -130,36 +152,41 @@ const AIChatPanel = forwardRef<AIChatHandle, AIChatPanelProps>(({ currentLanguag
             }`}>
               {renderMessageContent(msg.content)}
             </div>
-            {msg.role === 'assistant' && msg.content && !isTyping && idx === messages.length - 1 && (
-              <div className="flex gap-4 mt-3 px-1">
-                <button className="text-[9px] font-bold uppercase opacity-30 hover:opacity-100 transition-opacity tracking-widest">Copy Result</button>
-                <button className="text-[9px] font-bold uppercase opacity-30 hover:opacity-100 transition-opacity tracking-widest text-emerald-500">Share Link</button>
-              </div>
-            )}
           </div>
         ))}
         <div ref={chatEndRef} />
       </div>
 
       <div className="p-6 bg-[var(--bg-navbar)] border-t border-[var(--border-app)] transition-colors duration-300">
-        <div className="relative group">
-          <textarea
-            rows={2}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-            placeholder="Ask Co-Pilot something..."
-            className="w-full bg-white/[0.03] border border-white/5 rounded-2xl pl-6 pr-14 py-4 text-[12px] focus:outline-none focus:border-[var(--accent-primary)]/30 text-[var(--text-highlight)] transition-all resize-none overflow-hidden placeholder-white/10 shadow-inner"
-          />
-          <button
-            onClick={() => handleSend()}
-            disabled={isTyping || !inputValue.trim()}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-[var(--accent-primary)] text-black rounded-xl transition-all disabled:opacity-20 active:scale-90 shadow-xl shadow-[var(--accent-primary)]/20"
+        <div className="flex items-center gap-3 mb-4">
+          <button 
+            onClick={handleVoiceInput}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-white/5 text-slate-500 hover:bg-white/10'}`}
+            title="Voice Assistant"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 12h14M12 5l7 7-7 7" /></svg>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
           </button>
+          <div className="flex-1 relative group">
+            <textarea
+              rows={2}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+              placeholder={isListening ? "Listening..." : "Ask Co-Pilot something..."}
+              className="w-full bg-white/[0.03] border border-white/5 rounded-2xl pl-6 pr-14 py-4 text-[12px] focus:outline-none focus:border-[var(--accent-primary)]/30 text-[var(--text-highlight)] transition-all resize-none overflow-hidden placeholder-white/10 shadow-inner"
+            />
+            <button
+              onClick={() => handleSend()}
+              disabled={isTyping || !inputValue.trim()}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-[var(--accent-primary)] text-black rounded-xl transition-all disabled:opacity-20 active:scale-90 shadow-xl shadow-[var(--accent-primary)]/20"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 12h14M12 5l7 7-7 7" /></svg>
+            </button>
+          </div>
         </div>
-        <p className="mt-4 text-center text-[9px] opacity-20 font-bold uppercase tracking-[0.2em]">Powered by Gemini-3 Flash Engine</p>
+        <p className="text-center text-[9px] opacity-20 font-bold uppercase tracking-[0.2em]">Powered by Gemini-3 Flash Engine</p>
       </div>
     </div>
   );

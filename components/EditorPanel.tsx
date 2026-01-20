@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import Editor from '@monaco-editor/react';
-import { Language, CodeState, AIAction } from '../types';
+import { Language, CodeState, AIAction, ProjectSettings } from '../types';
 import { formatCode } from '../services/geminiService';
 
 interface EditorPanelProps {
@@ -14,6 +14,7 @@ interface EditorPanelProps {
   onCodeChange: (value: string | undefined) => void;
   onReset: () => void;
   onOptimize: () => void;
+  settings: ProjectSettings;
 }
 
 const EditorPanel: React.FC<EditorPanelProps> = ({
@@ -22,7 +23,8 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
   currentFileContent,
   onCodeChange,
   onReset,
-  onOptimize
+  onOptimize,
+  settings
 }) => {
   const [isFormatting, setIsFormatting] = useState(false);
 
@@ -61,7 +63,6 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
   };
 
   const handleEditorDidMount = (editor: any, monaco: any) => {
-    // Add custom keyboard shortcut for Format/Save (Ctrl+S or Cmd+S)
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       handleFormat();
     });
@@ -93,9 +94,9 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
             {isFormatting ? (
                <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
             ) : (
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 5-2 0 2 0 4 5 12 11 20 5 22 0" /></svg>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5" /></svg>
             )}
-            {isFormatting ? 'Formatting' : 'Prettier Format'}
+            {isFormatting ? 'Formatting' : 'Code Standard'}
           </button>
           <div className="w-[1px] h-3 bg-white/5"></div>
           <button 
@@ -107,7 +108,6 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
         </div>
       </div>
 
-      {/* Tabs Bar */}
       <div className="h-10 bg-[var(--bg-app)] border-b border-[var(--border-app)] flex items-center shrink-0 transition-colors duration-300">
         <div className="h-full px-5 border-r border-[var(--border-app)] bg-white/5 flex items-center gap-3 relative">
            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-[var(--accent-primary)] shadow-[0_0_12px_rgba(var(--accent-primary),0.6)]"></div>
@@ -139,9 +139,9 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
           onChange={onCodeChange}
           onMount={handleEditorDidMount}
           options={{
-            fontSize: 13,
+            fontSize: settings.fontSize,
             fontFamily: "'Fira Code', monospace",
-            minimap: { enabled: false },
+            minimap: { enabled: settings.minimap },
             padding: { top: 20 },
             lineHeight: 22,
             cursorSmoothCaretAnimation: "on",
@@ -150,6 +150,8 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
             fontLigatures: true,
             formatOnPaste: true,
             formatOnType: true,
+            wordWrap: settings.wordWrap,
+            lineNumbers: settings.lineNumbers,
             scrollbar: {
               vertical: 'visible',
               horizontal: 'visible',

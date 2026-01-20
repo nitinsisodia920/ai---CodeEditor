@@ -9,8 +9,10 @@ import ActivityBar from './components/ActivityBar';
 import TabBar from './components/TabBar';
 import SearchPanel from './components/SearchPanel';
 import TemplatesPanel from './components/TemplatesPanel';
+import InterviewPanel from './components/InterviewPanel';
+import SettingsModal from './components/SettingsModal';
 import { useCodeState } from './hooks/useCodeState';
-import { Language, ExecutionResult, CodeState, AIAction, ThemeType, ProjectFile, ProjectTemplate } from './types';
+import { Language, ExecutionResult, CodeState, AIAction, ThemeType, ProjectFile, ProjectTemplate, ExecutionHistoryItem, ProjectSettings } from './types';
 import { executeCode } from './services/executionService';
 import { simulateMongoQuery } from './services/geminiService';
 import { INITIAL_CODE, THEMES } from './constants';
@@ -34,6 +36,18 @@ const App: React.FC = () => {
   const [isMongoLoading, setIsMongoLoading] = useState(false);
   const [shareToast, setShareToast] = useState(false);
   
+  // Advanced Features State
+  const [executionHistory, setExecutionHistory] = useState<ExecutionHistoryItem[]>([]);
+  const [interviewMode, setInterviewMode] = useState(false);
+  const [timer, setTimer] = useState(0);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState<ProjectSettings>({
+    fontSize: 14,
+    wordWrap: 'on',
+    lineNumbers: 'on',
+    minimap: false
+  });
+
   // Tab Management
   const [openFileIds, setOpenFileIds] = useState<string[]>([]);
   
@@ -43,13 +57,26 @@ const App: React.FC = () => {
   const [outputPanelCollapsed, setOutputPanelCollapsed] = useState(false);
   const [isOutputMaximized, setIsOutputMaximized] = useState(false);
   
-  const [activeSidebarTab, setActiveSidebarTab] = useState<'explorer' | 'snippets' | 'search' | 'templates'>('explorer');
+  const [activeSidebarTab, setActiveSidebarTab] = useState<'explorer' | 'snippets' | 'search' | 'templates' | 'interview'>('explorer');
   const [currentLanguage, setCurrentLanguage] = useState<Language>(activeFile?.language || 'python');
   const [currentTheme, setCurrentTheme] = useState<ThemeType>(() => {
     return (localStorage.getItem('codestream_theme') as ThemeType) || 'industrial';
   });
   
   const aiChatRef = useRef<AIChatHandle>(null);
+
+  // Timer logic for Interview Mode
+  useEffect(() => {
+    let interval: number;
+    if (interviewMode) {
+      interval = window.setInterval(() => {
+        setTimer(prev => prev + 1);
+      }, 1000);
+    } else {
+      setTimer(0);
+    }
+    return () => clearInterval(interval);
+  }, [interviewMode]);
 
   // Initialize tabs
   useEffect(() => {
@@ -222,15 +249,31 @@ const App: React.FC = () => {
     setOutputPanelCollapsed(false);
 
     try {
+      let result: ExecutionResult;
       if (activeFile.language === 'mongodb') {
         setIsMongoLoading(true);
         const results = await simulateMongoQuery(activeFile.content);
         setMongoResults(results);
         setIsMongoLoading(false);
+        result = { output: JSON.stringify(results, null, 2), status: 'SUCCESS' };
       } else if (activeFile.language !== 'html') {
-        const result = await executeCode(activeFile.language, activeFile.content, stdin);
+        result = await executeCode(activeFile.language, activeFile.content, stdin);
         setExecutionResult(result);
+      } else {
+        result = { output: 'Preview updated.', status: 'SUCCESS' };
       }
+
+      // Add to history
+      const historyItem: ExecutionHistoryItem = {
+        id: Math.random().toString(36).substr(2, 9),
+        timestamp: Date.now(),
+        language: activeFile.language,
+        status: result.status || 'UNKNOWN',
+        output: result.error || result.output,
+        codeSnippet: activeFile.content.slice(0, 50) + '...'
+      };
+      setExecutionHistory(prev => [historyItem, ...prev].slice(0, 50));
+
     } catch (error) {
       setExecutionResult({ 
         output: '', 
@@ -279,8 +322,15 @@ const App: React.FC = () => {
       onToggleOutputPanel={() => setOutputPanelCollapsed(!outputPanelCollapsed)}
       onExportProject={handleExportProject}
       onShareProject={handleShareProject}
+      interviewMode={interviewMode}
+      onToggleInterviewMode={() => {
+        setInterviewMode(!interviewMode);
+        if (!interviewMode) setActiveSidebarTab('interview');
+      }}
+      timer={timer}
+      onOpenSettings={() => setIsSettingsOpen(true)}
     />
-  ), [currentLanguage, currentTheme, isRunning, files, setActiveFileId, runCode, aiPanelCollapsed, outputPanelCollapsed, handleExportProject, handleShareProject]);
+  ), [currentLanguage, currentTheme, isRunning, files, setActiveFileId, runCode, aiPanelCollapsed, outputPanelCollapsed, handleExportProject, handleShareProject, interviewMode, timer]);
 
   return (
     <div className="h-screen flex flex-col bg-[var(--bg-app)] text-[var(--text-app)] overflow-hidden antialiased font-inter transition-colors duration-300">
@@ -303,7 +353,10 @@ const App: React.FC = () => {
           <aside className="w-64 flex flex-col bg-[var(--bg-sidebar)] border-r border-[var(--border-app)] shrink-0 transition-all duration-300 z-10">
             <div className="h-9 flex items-center px-4 border-b border-[var(--border-app)] bg-black/10">
               <span className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-60">
-                {activeSidebarTab === 'explorer' ? 'Explorer' : activeSidebarTab === 'snippets' ? 'Snippets' : activeSidebarTab === 'search' ? 'Search Workspace' : 'Project Templates'}
+                {activeSidebarTab === 'explorer' ? 'Explorer' : 
+                 activeSidebarTab === 'snippets' ? 'Snippets' : 
+                 activeSidebarTab === 'search' ? 'Search Workspace' : 
+                 activeSidebarTab === 'templates' ? 'Templates' : 'Problem Statement'}
               </span>
             </div>
             
@@ -350,8 +403,10 @@ const App: React.FC = () => {
                 <SnippetsPanel language={currentLanguage} onSelect={handleInsertSnippet} />
               ) : activeSidebarTab === 'search' ? (
                 <SearchPanel files={files} onSelectFile={setActiveFileId} />
-              ) : (
+              ) : activeSidebarTab === 'templates' ? (
                 <TemplatesPanel onSelect={handleLoadTemplate} />
+              ) : (
+                <InterviewPanel />
               )}
             </div>
           </aside>
@@ -376,6 +431,7 @@ const App: React.FC = () => {
               onCodeChange={handleCodeChange}
               onReset={handleReset}
               onOptimize={handleOptimize}
+              settings={settings}
             />
           </div>
           
@@ -393,6 +449,7 @@ const App: React.FC = () => {
                 onClose={() => { setOutputPanelCollapsed(true); setIsOutputMaximized(false); }}
                 isMaximized={isOutputMaximized}
                 onToggleMaximize={() => setIsOutputMaximized(!isOutputMaximized)}
+                history={executionHistory}
               />
             </div>
           )}
@@ -409,6 +466,14 @@ const App: React.FC = () => {
           </div>
         )}
       </div>
+
+      {isSettingsOpen && (
+        <SettingsModal 
+          settings={settings} 
+          onUpdate={setSettings} 
+          onClose={() => setIsSettingsOpen(false)} 
+        />
+      )}
 
       {/* Share Toast Notification */}
       {shareToast && (

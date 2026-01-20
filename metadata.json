@@ -1,5 +1,7 @@
 {
   "name": "CodeStream AI",
   "description": "A high-performance, AI-assisted multi-language coding platform with real-time execution, live frontend preview, and simulated MongoDB playground.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }
