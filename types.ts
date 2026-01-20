@@ -3,6 +3,15 @@ export type Language = 'python' | 'java' | 'javascript' | 'html' | 'mongodb';
 
 export type ThemeType = 'industrial' | 'midnight' | 'nord' | 'cyberpunk' | 'forest';
 
+export type AIPersona = 'Mentor' | 'Security Lead' | 'Clean Code Guru' | 'Performance Ninja';
+
+export interface AIAuditResult {
+  maintainability: number;
+  security: number;
+  performance: number;
+  suggestions: string[];
+}
+
 export interface ProjectFile {
   id: string;
   name: string;
@@ -64,5 +73,6 @@ export enum AIAction {
   FIX = 'Fix Errors',
   OPTIMIZE = 'Optimize Performance',
   GENERATE = 'Generate Code',
-  CONVERT = 'Convert Language'
+  CONVERT = 'Convert Language',
+  AUDIT = 'Comprehensive Audit'
 }

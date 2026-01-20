@@ -10,11 +10,12 @@ import TabBar from './components/TabBar';
 import SearchPanel from './components/SearchPanel';
 import TemplatesPanel from './components/TemplatesPanel';
 import InterviewPanel from './components/InterviewPanel';
+import BlueprintPanel from './components/BlueprintPanel';
 import SettingsModal from './components/SettingsModal';
 import { useCodeState } from './hooks/useCodeState';
 import { Language, ExecutionResult, CodeState, AIAction, ThemeType, ProjectFile, ProjectTemplate, ExecutionHistoryItem, ProjectSettings } from './types';
 import { executeCode } from './services/executionService';
-import { simulateMongoQuery } from './services/geminiService';
+import { simulateMongoQuery, auditCode } from './services/geminiService';
 import { INITIAL_CODE, THEMES } from './constants';
 
 const App: React.FC = () => {
@@ -57,7 +58,7 @@ const App: React.FC = () => {
   const [outputPanelCollapsed, setOutputPanelCollapsed] = useState(false);
   const [isOutputMaximized, setIsOutputMaximized] = useState(false);
   
-  const [activeSidebarTab, setActiveSidebarTab] = useState<'explorer' | 'snippets' | 'search' | 'templates' | 'interview'>('explorer');
+  const [activeSidebarTab, setActiveSidebarTab] = useState<'explorer' | 'snippets' | 'search' | 'templates' | 'interview' | 'blueprint'>('explorer');
   const [currentLanguage, setCurrentLanguage] = useState<Language>(activeFile?.language || 'python');
   const [currentTheme, setCurrentTheme] = useState<ThemeType>(() => {
     return (localStorage.getItem('codestream_theme') as ThemeType) || 'industrial';
@@ -356,7 +357,8 @@ const App: React.FC = () => {
                 {activeSidebarTab === 'explorer' ? 'Explorer' : 
                  activeSidebarTab === 'snippets' ? 'Snippets' : 
                  activeSidebarTab === 'search' ? 'Search Workspace' : 
-                 activeSidebarTab === 'templates' ? 'Templates' : 'Problem Statement'}
+                 activeSidebarTab === 'templates' ? 'Templates' : 
+                 activeSidebarTab === 'blueprint' ? 'Neuro-Blueprint' : 'Problem Statement'}
               </span>
             </div>
             
@@ -405,6 +407,8 @@ const App: React.FC = () => {
                 <SearchPanel files={files} onSelectFile={setActiveFileId} />
               ) : activeSidebarTab === 'templates' ? (
                 <TemplatesPanel onSelect={handleLoadTemplate} />
+              ) : activeSidebarTab === 'blueprint' ? (
+                <BlueprintPanel />
               ) : (
                 <InterviewPanel />
               )}
