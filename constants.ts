@@ -1,5 +1,5 @@
 
-import { Language, CodeState, ThemeType } from './types';
+import { Language, CodeState, ThemeType, ProjectTemplate } from './types';
 
 export const INITIAL_CODE: CodeState = {
   python: `def fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n-1) + fibonacci(n-2)\n\n# Calculate first 10 numbers\nfor i in range(10):\n    print(f"Fib({i}) = {fibonacci(i)}")`,
@@ -10,6 +10,53 @@ export const INITIAL_CODE: CodeState = {
   frontendJs: `const btn = document.getElementById('cta-btn');\nbtn.addEventListener('click', () => {\n  alert('Hello from the CodeStream Sandbox!');\n  btn.style.transform = 'scale(1.1)';\n  setTimeout(() => btn.style.transform = 'scale(1)', 200);\n});`,
   mongodb: `// 🍃 MongoDB Simulated Playground\n// Query: Find all active premium users aged 25-35\n\ndb.users.find({\n  age: { $gte: 25, $lte: 35 },\n  status: "active",\n  membership: "premium"\n}).sort({ lastLogin: -1 }).limit(5)`
 };
+
+export const PROJECT_TEMPLATES: ProjectTemplate[] = [
+  {
+    id: 'rest-api-node',
+    name: 'Express REST API',
+    description: 'A modular Node.js API structure with routes and mock data.',
+    icon: '🚀',
+    category: 'Backend',
+    files: [
+      { name: 'app.js', language: 'javascript', content: `const express = require('express');\nconst routes = require('./routes');\nconst app = express();\n\napp.use(express.json());\napp.use('/api', routes);\n\napp.get('/', (req, res) => res.send('API Root Active'));\n\nconst PORT = 3000;\napp.listen(PORT, () => console.log(\`Server on port \${PORT}\`));` },
+      { name: 'routes.js', language: 'javascript', content: `const express = require('express');\nconst router = express.Router();\n\nconst users = [{id: 1, name: 'Dev'}];\n\nrouter.get('/users', (req, res) => res.json(users));\nrouter.post('/users', (req, res) => {\n  users.push(req.body);\n  res.status(201).json(req.body);\n});\n\nmodule.exports = router;` }
+    ]
+  },
+  {
+    id: 'flask-starter',
+    name: 'Python Flask Web',
+    description: 'Basic Flask application with routing and templates.',
+    icon: '🐍',
+    category: 'Backend',
+    files: [
+      { name: 'main.py', language: 'python', content: `from flask import Flask, jsonify\n\napp = Flask(__name__)\n\n@app.route("/")\ndef index():\n    return "Welcome to CodeStream Flask"\n\n@app.route("/health")\ndef health():\n    return jsonify({"status": "healthy"})\n\nif __name__ == "__main__":\n    app.run(debug=True)` }
+    ]
+  },
+  {
+    id: 'react-dashboard',
+    name: 'Admin Dashboard',
+    description: 'A modern UI dashboard built with HTML, CSS, and interactive JS.',
+    icon: '📊',
+    category: 'Frontend',
+    files: [
+      { name: 'index.html', language: 'html', content: `<div class="sidebar">Nav</div>\n<div class="main">\n  <header>Header</header>\n  <section class="stats">\n    <div class="stat-card">Users: 1.2k</div>\n    <div class="stat-card">Revenue: $45k</div>\n  </section>\n</div>` },
+      { name: 'styles.css', language: 'html', content: `body { display: flex; height: 100vh; font-family: sans-serif; margin: 0; background: #f0f2f5; }\n.sidebar { width: 240px; background: #1c252e; color: #fff; padding: 20px; }\n.main { flex: 1; display: flex; flex-direction: column; }\nheader { height: 64px; background: #fff; border-bottom: 1px solid #ddd; display: flex; align-items: center; padding: 0 20px; }\n.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; }\n.stat-card { background: #fff; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-weight: bold; }` },
+      { name: 'script.js', language: 'html', content: `console.log('Dashboard initialized...');\ndocument.querySelectorAll('.stat-card').forEach(card => {\n  card.addEventListener('mouseenter', () => card.style.transform = 'translateY(-5px)');\n  card.addEventListener('mouseleave', () => card.style.transform = 'translateY(0)');\n});` }
+    ]
+  },
+  {
+    id: 'ecommerce-schema',
+    name: 'E-commerce DB',
+    description: 'MongoDB queries for a typical shopping platform.',
+    icon: '🛍️',
+    category: 'Database',
+    files: [
+      { name: 'orders.mongodb', language: 'mongodb', content: `// Calculate total revenue per category\ndb.products.aggregate([\n  { $group: { _id: "$category", revenue: { $sum: { $multiply: ["$price", "$sales"] } } } },\n  { $sort: { revenue: -1 } }\n])` },
+      { name: 'users.mongodb', language: 'mongodb', content: `// Find loyal customers\ndb.users.find({ orders_count: { $gt: 10 } }).limit(20)` }
+    ]
+  }
+];
 
 export const LANGUAGES: { value: Language; label: string; icon: string }[] = [
   { value: 'python', label: 'Python', icon: '🐍' },

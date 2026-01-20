@@ -10,6 +10,15 @@ export interface ProjectFile {
   language: Language;
 }
 
+export interface ProjectTemplate {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: string;
+  files: { name: string; content: string; language: Language }[];
+}
+
 export interface CodeState {
   python: string;
   java: string;

@@ -99,6 +99,7 @@ export const useCodeState = () => {
     updateFileContent, 
     addFile, 
     renameFile,
-    deleteFile 
+    deleteFile,
+    setFiles
   };
 };

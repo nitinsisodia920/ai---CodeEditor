@@ -2,7 +2,7 @@
 import React from 'react';
 
 interface ActivityBarProps {
-  activeTab: 'explorer' | 'snippets' | 'search';
+  activeTab: 'explorer' | 'snippets' | 'search' | 'templates';
   onTabChange: (tab: string) => void;
 }
 
@@ -31,6 +31,14 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeTab, onTabChange }) => 
         title="Snippets"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+      </ActivityIcon>
+
+      <ActivityIcon 
+        active={activeTab === 'templates'} 
+        onClick={() => onTabChange('templates')} 
+        title="Templates"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>
       </ActivityIcon>
 
       <div className="mt-auto flex flex-col gap-4">

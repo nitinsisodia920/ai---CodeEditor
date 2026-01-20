@@ -8,8 +8,9 @@ import SnippetsPanel from './components/SnippetsPanel';
 import ActivityBar from './components/ActivityBar';
 import TabBar from './components/TabBar';
 import SearchPanel from './components/SearchPanel';
+import TemplatesPanel from './components/TemplatesPanel';
 import { useCodeState } from './hooks/useCodeState';
-import { Language, ExecutionResult, CodeState, AIAction, ThemeType, ProjectFile } from './types';
+import { Language, ExecutionResult, CodeState, AIAction, ThemeType, ProjectFile, ProjectTemplate } from './types';
 import { executeCode } from './services/executionService';
 import { simulateMongoQuery } from './services/geminiService';
 import { INITIAL_CODE, THEMES } from './constants';
@@ -22,8 +23,9 @@ const App: React.FC = () => {
     updateFileContent, 
     addFile, 
     renameFile,
-    deleteFile 
-  } = useCodeState();
+    deleteFile,
+    setFiles // Ensure this is exposed by useCodeState
+  } = useCodeState() as any;
 
   const [stdin, setStdin] = useState('');
   const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
@@ -40,7 +42,7 @@ const App: React.FC = () => {
   const [aiPanelCollapsed, setAiPanelCollapsed] = useState(false);
   const [outputPanelCollapsed, setOutputPanelCollapsed] = useState(false);
   
-  const [activeSidebarTab, setActiveSidebarTab] = useState<'explorer' | 'snippets' | 'search'>('explorer');
+  const [activeSidebarTab, setActiveSidebarTab] = useState<'explorer' | 'snippets' | 'search' | 'templates'>('explorer');
   const [currentLanguage, setCurrentLanguage] = useState<Language>(activeFile?.language || 'python');
   const [currentTheme, setCurrentTheme] = useState<ThemeType>(() => {
     return (localStorage.getItem('codestream_theme') as ThemeType) || 'industrial';
@@ -112,6 +114,23 @@ const App: React.FC = () => {
       alert('Failed to generate share link. The project might be too large.');
     }
   }, [files]);
+
+  const handleLoadTemplate = useCallback((template: ProjectTemplate) => {
+    if (!confirm(`Overwrite current workspace with "${template.name}"?`)) return;
+
+    const newFiles = template.files.map(tf => ({
+      id: Math.random().toString(36).substr(2, 9),
+      name: tf.name,
+      content: tf.content,
+      language: tf.language
+    }));
+
+    setFiles(newFiles);
+    setOpenFileIds(newFiles.map(f => f.id));
+    setActiveFileId(newFiles[0].id);
+    setCurrentLanguage(newFiles[0].language);
+    setActiveSidebarTab('explorer');
+  }, [setFiles, setActiveFileId]);
 
   const handleCodeChange = useCallback((value: string | undefined) => {
     if (value === undefined || !activeFile) return;
@@ -283,7 +302,7 @@ const App: React.FC = () => {
           <aside className="w-64 flex flex-col bg-[var(--bg-sidebar)] border-r border-[var(--border-app)] shrink-0 transition-all duration-300 z-10">
             <div className="h-9 flex items-center px-4 border-b border-[var(--border-app)] bg-black/10">
               <span className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-60">
-                {activeSidebarTab === 'explorer' ? 'Explorer' : activeSidebarTab === 'snippets' ? 'Snippets' : 'Search Workspace'}
+                {activeSidebarTab === 'explorer' ? 'Explorer' : activeSidebarTab === 'snippets' ? 'Snippets' : activeSidebarTab === 'search' ? 'Search Workspace' : 'Project Templates'}
               </span>
             </div>
             
@@ -299,7 +318,7 @@ const App: React.FC = () => {
                     </button>
                   </div>
                   <div className="flex-1 px-2 pb-4 space-y-0.5 overflow-y-auto scrollbar-none">
-                    {filteredFiles.map(file => {
+                    {filteredFiles.map((file: any) => {
                       const isActive = activeFile?.id === file.id;
                       return (
                         <div 
@@ -328,8 +347,10 @@ const App: React.FC = () => {
                 </div>
               ) : activeSidebarTab === 'snippets' ? (
                 <SnippetsPanel language={currentLanguage} onSelect={handleInsertSnippet} />
-              ) : (
+              ) : activeSidebarTab === 'search' ? (
                 <SearchPanel files={files} onSelectFile={setActiveFileId} />
+              ) : (
+                <TemplatesPanel onSelect={handleLoadTemplate} />
               )}
             </div>
           </aside>
