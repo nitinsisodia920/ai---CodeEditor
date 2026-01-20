@@ -14,6 +14,8 @@ interface OutputPanelProps {
   mongoResults: any;
   isMongoLoading: boolean;
   onClose?: () => void;
+  isMaximized?: boolean;
+  onToggleMaximize?: () => void;
 }
 
 const OutputPanel: React.FC<OutputPanelProps> = ({
@@ -25,19 +27,46 @@ const OutputPanel: React.FC<OutputPanelProps> = ({
   isRunning,
   mongoResults,
   isMongoLoading,
-  onClose
+  onClose,
+  isMaximized,
+  onToggleMaximize
 }) => {
+  const renderPanelHeaderButtons = () => (
+    <div className="flex items-center gap-1.5">
+      {onToggleMaximize && (
+        <button 
+          onClick={onToggleMaximize} 
+          title={isMaximized ? "Exit Fullscreen" : "Fullscreen Output"}
+          className="p-1 hover:bg-white/10 rounded-md text-slate-500 hover:text-white transition-all"
+        >
+          {isMaximized ? (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9L4 4m0 0l5 0m-5 0l0 5m11 0l5-5m0 0l-5 0m5 0l0 5m-5 6l5 5m0 0l-5 0m5 0l0-5m-11 0l-5 5m0 0l5 0m-5 0l0-5" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+          )}
+        </button>
+      )}
+      {onClose && (
+        <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-md text-slate-500 hover:text-white transition-all">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      )}
+    </div>
+  );
+
   if (language === 'html') {
     return (
-      <div className="h-full border-t border-[var(--border-app)] bg-[var(--bg-app)] transition-colors duration-300 relative">
-        <div className="absolute top-2 right-4 z-10">
-          {onClose && (
-            <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-md text-slate-500 hover:text-white transition-all">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          )}
+      <div className="h-full border-t border-[var(--border-app)] bg-[var(--bg-app)] transition-colors duration-300 relative flex flex-col">
+        <div className="flex justify-end p-2 bg-black/10 border-b border-[var(--border-app)] absolute top-0 right-0 z-20">
+          {renderPanelHeaderButtons()}
         </div>
-        <LivePreview html={code.html} css={code.css} js={code.frontendJs} />
+        <div className="flex-1">
+          <LivePreview html={code.html} css={code.css} js={code.frontendJs} />
+        </div>
       </div>
     );
   }
@@ -46,11 +75,7 @@ const OutputPanel: React.FC<OutputPanelProps> = ({
     return (
       <div className="h-full border-t border-[var(--border-app)] transition-colors duration-300 flex flex-col">
         <div className="flex justify-end p-2 bg-black/10 border-b border-[var(--border-app)]">
-           {onClose && (
-            <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-md text-slate-500 hover:text-white transition-all">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          )}
+           {renderPanelHeaderButtons()}
         </div>
         <div className="flex-1">
           <MongoPlayground results={mongoResults} isLoading={isMongoLoading} />
@@ -61,7 +86,7 @@ const OutputPanel: React.FC<OutputPanelProps> = ({
 
   return (
     <div className="h-full border-t border-[var(--border-app)] flex bg-[var(--bg-app)] transition-colors duration-300 overflow-hidden">
-      <div className="w-1/4 border-r border-[var(--border-app)] flex flex-col bg-black/5">
+      <div className={`${isMaximized ? 'w-1/5' : 'w-1/4'} border-r border-[var(--border-app)] flex flex-col bg-black/5 transition-all duration-300`}>
         <div className="px-5 py-2.5 bg-black/10 border-b border-[var(--border-app)] flex items-center justify-between">
           <span className="text-[9px] font-black opacity-50 uppercase tracking-widest">Input</span>
           <div className="w-1 h-1 rounded-full opacity-20 bg-white"></div>
@@ -87,11 +112,7 @@ const OutputPanel: React.FC<OutputPanelProps> = ({
                 <span className="flex items-center gap-1.5">MEM {executionResult.memory}</span>
               </div>
             )}
-            {onClose && (
-              <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-md text-slate-500 hover:text-white transition-all">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            )}
+            {renderPanelHeaderButtons()}
           </div>
         </div>
         <div className="flex-1 p-5 font-mono text-[12px] overflow-auto whitespace-pre-wrap scrollbar-none">

@@ -24,7 +24,7 @@ const App: React.FC = () => {
     addFile, 
     renameFile,
     deleteFile,
-    setFiles // Ensure this is exposed by useCodeState
+    setFiles 
   } = useCodeState() as any;
 
   const [stdin, setStdin] = useState('');
@@ -41,6 +41,7 @@ const App: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [aiPanelCollapsed, setAiPanelCollapsed] = useState(false);
   const [outputPanelCollapsed, setOutputPanelCollapsed] = useState(false);
+  const [isOutputMaximized, setIsOutputMaximized] = useState(false);
   
   const [activeSidebarTab, setActiveSidebarTab] = useState<'explorer' | 'snippets' | 'search' | 'templates'>('explorer');
   const [currentLanguage, setCurrentLanguage] = useState<Language>(activeFile?.language || 'python');
@@ -364,7 +365,7 @@ const App: React.FC = () => {
             onCloseFile={handleCloseTab} 
           />
           
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className={`flex-1 flex flex-col min-h-0 overflow-hidden ${isOutputMaximized ? 'hidden' : ''}`}>
             <EditorPanel
               language={currentLanguage}
               fileName={activeFile?.name || 'main'}
@@ -379,7 +380,7 @@ const App: React.FC = () => {
           </div>
           
           {!outputPanelCollapsed && (
-            <div className="h-[35%] min-h-[150px] flex flex-col transition-all duration-300">
+            <div className={`${isOutputMaximized ? 'flex-1' : 'h-[35%] min-h-[150px]'} flex flex-col transition-all duration-300`}>
               <OutputPanel
                 language={activeFile?.language || 'python'}
                 code={combinedFrontendState as any}
@@ -389,7 +390,9 @@ const App: React.FC = () => {
                 isRunning={isRunning}
                 mongoResults={mongoResults}
                 isMongoLoading={isMongoLoading}
-                onClose={() => setOutputPanelCollapsed(true)}
+                onClose={() => { setOutputPanelCollapsed(true); setIsOutputMaximized(false); }}
+                isMaximized={isOutputMaximized}
+                onToggleMaximize={() => setIsOutputMaximized(!isOutputMaximized)}
               />
             </div>
           )}
